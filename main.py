@@ -7,7 +7,10 @@ import tkinter as tk
 from tkinter import messagebox
 
 # Data preparation and model training
-def prepare_and_train_model():
+def prepare_and_train_model(learning_rate, max_epochs, goal):
+    """
+    Prepares the dataset, trains the Perceptron model with specified hyperparameters, and saves it to a file.
+    """
     # Sample dataset
     data = {
         'Math': [80, 90, 50, 60, 70],
@@ -28,16 +31,24 @@ def prepare_and_train_model():
     # Split the dataset
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Initialize and train the perceptron
-    perceptron = Perceptron()
+    # Initialize the Perceptron model with specified hyperparameters
+    perceptron = Perceptron(eta0=learning_rate, max_iter=max_epochs)
+
+    # Train the Perceptron model using the training set
     perceptron.fit(X_train, y_train)
 
-    # Test the model
+    # Predict the outcomes for the test set
     y_pred = perceptron.predict(X_test)
-    print(f'Accuracy: {accuracy_score(y_test, y_pred)}')
 
-    # Save the model
+    # Calculate the accuracy of the model
+    accuracy = accuracy_score(y_test, y_pred)
+    print(f'Accuracy: {accuracy}')
+
+    # Save the trained model to a file
     joblib.dump(perceptron, 'perceptron_model.pkl')
+
+    # Return the trained model
+    return perceptron
 
 # GUI prediction
 def predict():
@@ -52,28 +63,56 @@ def predict():
     except ValueError:
         messagebox.showerror("Input error", "Please enter valid numerical values.")
 
-# Run model preparation and training
-prepare_and_train_model()
+def train_model():
+    try:
+        learning_rate = float(entry_learning_rate.get())
+        max_epochs = int(entry_max_epochs.get())
+        goal = float(entry_goal.get())
+        global perceptron  # Add this line to access the global variable
+        perceptron = prepare_and_train_model(learning_rate, max_epochs, goal)
+        accuracy = accuracy_score(y_test, y_pred)
+        if accuracy >= goal:
+            messagebox.showinfo("Training Result", f'Model trained successfully with accuracy: {accuracy}')
+        else:
+            messagebox.showwarning("Training Result", f'Model accuracy ({accuracy}) did not meet the goal ({goal}).')
+    except ValueError:
+        messagebox.showerror("Input error", "Please enter valid numerical values for training parameters.")
 
-# Load the trained perceptron model
-perceptron = joblib.load('perceptron_model.pkl')
+# Load the trained perceptron model (initialize as None)
+perceptron = None
 
 # GUI setup
 root = tk.Tk()
 root.title("Pass/Fail Predictor")
 
-tk.Label(root, text="Math:").grid(row=0)
-tk.Label(root, text="Science:").grid(row=1)
-tk.Label(root, text="English:").grid(row=2)
+# Training parameters
+tk.Label(root, text="Learning Rate:").grid(row=0)
+tk.Label(root, text="Max Epochs:").grid(row=1)
+tk.Label(root, text="Goal (Accuracy):").grid(row=2)
+
+entry_learning_rate = tk.Entry(root)
+entry_max_epochs = tk.Entry(root)
+entry_goal = tk.Entry(root)
+
+entry_learning_rate.grid(row=0, column=1)
+entry_max_epochs.grid(row=1, column=1)
+entry_goal.grid(row=2, column=1)
+
+tk.Button(root, text='Train Model', command=train_model).grid(row=3, column=1, pady=4)
+
+# Prediction inputs
+tk.Label(root, text="Math:").grid(row=4)
+tk.Label(root, text="Science:").grid(row=5)
+tk.Label(root, text="English:").grid(row=6)
 
 entry_math = tk.Entry(root)
 entry_science = tk.Entry(root)
 entry_english = tk.Entry(root)
 
-entry_math.grid(row=0, column=1)
-entry_science.grid(row=1, column=1)
-entry_english.grid(row=2, column=1)
+entry_math.grid(row=4, column=1)
+entry_science.grid(row=5, column=1)
+entry_english.grid(row=6, column=1)
 
-tk.Button(root, text='Predict', command=predict).grid(row=3, column=1, pady=4)
+tk.Button(root, text='Predict', command=predict).grid(row=7, column=1, pady=4)
 
 root.mainloop()
