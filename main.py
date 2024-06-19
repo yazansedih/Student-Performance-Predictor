@@ -1,16 +1,11 @@
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import Perceptron
-from sklearn.metrics import accuracy_score
-import joblib
+import numpy as np
 import tkinter as tk
 from tkinter import messagebox
 
-# Data preparation and model training
+from perceptron import Perceptron
+
 def prepare_and_train_model(learning_rate, max_epochs, goal):
-    """
-    Prepares the dataset, trains the Perceptron model with specified hyperparameters, and saves it to a file.
-    """
     # Sample dataset
     data = {
         'Math': [80, 90, 50, 60, 70],
@@ -25,38 +20,36 @@ def prepare_and_train_model(learning_rate, max_epochs, goal):
 
     # Load dataset
     df = pd.read_csv('student_scores.csv')
-    X = df[['Math', 'Science', 'English']]
-    y = df['Pass']
+    X = df[['Math', 'Science', 'English']].values
+    y = df['Pass'].values
 
-    # Split the dataset
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    # Normalize the data
+    global mean_X, std_X  # Declare as global to use in prediction
+    mean_X = X.mean(axis=0)
+    std_X = X.std(axis=0)
+    X = (X - mean_X) / std_X
 
     # Initialize the Perceptron model with specified hyperparameters
-    perceptron = Perceptron(eta0=learning_rate, max_iter=max_epochs)
+    perceptron = Perceptron(num_inputs=X.shape[1], learning_rate=learning_rate)
 
-    # Train the Perceptron model using the training set
-    perceptron.fit(X_train, y_train)
+    # Train the Perceptron model
+    perceptron.fit(X, y, max_epochs)
 
-    # Predict the outcomes for the test set
-    y_pred = perceptron.predict(X_test)
+    # Save the trained model to a file (simplified for demonstration purposes)
+    np.savez('perceptron_model.npz', weights=perceptron.weights)
 
-    # Calculate the accuracy of the model
-    accuracy = accuracy_score(y_test, y_pred)
-    print(f'Accuracy: {accuracy}')
+    # Calculate final accuracy
+    y_pred = perceptron.predict(X)
+    accuracy = np.mean(y_pred == y)
+    return perceptron, accuracy, X, y
 
-    # Save the trained model to a file
-    joblib.dump(perceptron, 'perceptron_model.pkl')
-
-    # Return the trained model
-    return perceptron
-
-# GUI prediction
 def predict():
     try:
         math = float(entry_math.get())
         science = float(entry_science.get())
         english = float(entry_english.get())
-        data = [[math, science, english]]
+        data = np.array([[math, science, english]])
+        data = (data - mean_X) / std_X  # Normalize input
         prediction = perceptron.predict(data)
         result = 'Pass' if prediction[0] == 1 else 'Fail'
         messagebox.showinfo("Result", f'The prediction is: {result}')
@@ -68,9 +61,8 @@ def train_model():
         learning_rate = float(entry_learning_rate.get())
         max_epochs = int(entry_max_epochs.get())
         goal = float(entry_goal.get())
-        global perceptron  # Add this line to access the global variable
-        perceptron = prepare_and_train_model(learning_rate, max_epochs, goal)
-        accuracy = accuracy_score(y_test, y_pred)
+        global perceptron, X, y  # Add this line to access the global variables
+        perceptron, accuracy, X, y = prepare_and_train_model(learning_rate, max_epochs, goal)
         if accuracy >= goal:
             messagebox.showinfo("Training Result", f'Model trained successfully with accuracy: {accuracy}')
         else:
@@ -80,6 +72,8 @@ def train_model():
 
 # Load the trained perceptron model (initialize as None)
 perceptron = None
+mean_X = None
+std_X = None
 
 # GUI setup
 root = tk.Tk()
