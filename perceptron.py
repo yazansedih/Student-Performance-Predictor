@@ -9,15 +9,15 @@ class Perceptron:
         Z = inputs @ self.weights[1:].T + self.weights[0]
         return Z
 
-    def Heaviside_step_fn(self, z):
+    def activation_function(self, z):
         return 1 if z >= 0 else 0
 
     def predict(self, inputs):
         Z = self.linear(inputs)
         try:
-            pred = [self.Heaviside_step_fn(z) for z in Z]
+            pred = [self.activation_function(z) for z in Z]
         except TypeError:
-            return self.Heaviside_step_fn(Z)
+            return self.activation_function(Z)
         return pred
 
     def loss(self, prediction, target):
